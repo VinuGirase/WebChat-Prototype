@@ -68,7 +68,7 @@ func CleanupRoutine() {
 		now := time.Now().Unix()
 		var toRelease []int
 		for num, lastUsed := range lastUsedMap {
-			if now-lastUsed > 3600 {
+			if now-lastUsed > 600 {
 				toRelease = append(toRelease, num)
 			}
 		}
