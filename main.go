@@ -8,10 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 )
-
 
 var (
 	occupied    = []int{}
@@ -33,9 +31,7 @@ func AssignNumber() (int, error) {
 	unoccupied = unoccupied[1:]
 	occupied = append(occupied, num)
 	occupiedApi = append(occupiedApi, fmt.Sprintf("/ws/%d", num))
-
 	lastUsedMap[num] = time.Now().Unix()
-
 	return num, nil
 }
 
@@ -45,9 +41,6 @@ func UseNum(num int) {
 
 	if _, exists := lastUsedMap[num]; exists {
 		lastUsedMap[num] = time.Now().Unix()
-		fmt.Printf("\n Using %d | Updated Last Used Time: %d\n", num, lastUsedMap[num])
-	} else {
-		fmt.Printf("\n Number %d is not assigned, can't use.\n", num)
 	}
 }
 
@@ -66,51 +59,37 @@ func ReleaseNumber(num int) {
 		}
 	}
 
-	fmt.Printf("Number %d not found in occupied.\n", num)
 }
 
 func CleanupRoutine() {
 	for {
 		time.Sleep(time.Hour)
-
 		mu.Lock()
 		now := time.Now().Unix()
 		var toRelease []int
-		fmt.Printf(" map : %v\n", lastUsedMap)
 		for num, lastUsed := range lastUsedMap {
-			fmt.Printf("\n\n Number :  %d , difference : %d ", num, now-lastUsed)
 			if now-lastUsed > 3600 {
-				fmt.Printf("\n\n Number released :  %d .\n", num)
 				toRelease = append(toRelease, num)
 			}
 		}
 		mu.Unlock()
-
 		for _, num := range toRelease {
 			ReleaseNumber(num)
 		}
 	}
 }
 
-
-
-// WebSocket upgrader
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-// Connected clients
 var clients = make(map[*websocket.Conn]bool)
-
-// Broadcast channel
-var broadcast = make(chan Message)
 
 type Message struct {
 	Username string `json:"username"`
 	Message  string `json:"message"`
-	Code    int    `json:"code"`
+	Code     int    `json:"code"`
 }
-
 
 func contains(item string) bool {
 	for _, value := range occupiedApi {
@@ -122,7 +101,6 @@ func contains(item string) bool {
 }
 
 func handleConnections(w http.ResponseWriter, r *http.Request) {
-
 	if !contains(r.URL.Path) {
 		http.Error(w, "Invalid API", http.StatusNotFound)
 		return
@@ -133,7 +111,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
-
 	clients[conn] = true
 
 	for {
@@ -148,15 +125,12 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Error parsing message:", err)
 			continue
 		}
-
 		UseNum(receivedMessage.Code)
-
 		for client := range clients {
-			client.WriteMessage(websocket.TextMessage, msg) // Directly forwarding the original JSON
+			client.WriteMessage(websocket.TextMessage, msg)
 		}
 	}
 }
-
 
 func GenSession(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -164,21 +138,16 @@ func GenSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionID,err := AssignNumber()
-
+	sessionID, err := AssignNumber()
 	if err != nil {
 		http.Error(w, "No available numbers", http.StatusServiceUnavailable)
 		return
 	}
+
 	response := map[string]string{"session_id": strconv.Itoa(sessionID)}
-
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
-
-
-
 
 type Response struct {
 	Exists bool `json:"exists"`
@@ -186,78 +155,61 @@ type Response struct {
 
 func checkCode(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
-	// Extract code from URL path parameter
-	vars := mux.Vars(r)
-	codeParam, exists := vars["code"]
-	if !exists {
-		json.NewEncoder(w).Encode(Response{Exists: false})
-		return
-	}
-
-	fmt.Printf("Code: %s\n", codeParam)
-
+	codeParam := r.URL.Query().Get("code")
 	code, err := strconv.Atoi(codeParam)
 	if err != nil {
 		json.NewEncoder(w).Encode(Response{Exists: false})
 		return
 	}
 
-	// Check if code exists in occupied slice
 	for _, num := range occupied {
 		if num == code {
 			json.NewEncoder(w).Encode(Response{Exists: true})
 			return
 		}
 	}
-
 	json.NewEncoder(w).Encode(Response{Exists: false})
 }
 
-func enableCORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+func enableCORS(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 }
 
-func genLink(router *mux.Router) {
+func genLink() {
 	for i := 1000; i <= 1005; i++ {
 		api := fmt.Sprintf("/ws/%d", i)
 		unoccupied = append(unoccupied, i)
-		router.HandleFunc(api, handleConnections).Methods("GET")
+		http.HandleFunc(api, func(w http.ResponseWriter, r *http.Request) {
+			enableCORS(w, r)
+			handleConnections(w, r)
+		})
 	}
 }
 
 func main() {
-	router := mux.NewRouter()
+	genLink()
 
-	// Generate WebSocket links
-	genLink(router)
+	http.HandleFunc("/genSession", func(w http.ResponseWriter, r *http.Request) {
+		enableCORS(w, r)
+		GenSession(w, r)
+	})
 
-	// Handle session generation
-	router.HandleFunc("/genSession", GenSession).Methods("GET", "OPTIONS")
-
-	// Handle check-code route
-	router.HandleFunc("/check-code/{code}", checkCode).Methods("GET", "OPTIONS")
-
-	// Apply CORS middleware
-	handler := enableCORS(router)
+	http.HandleFunc("/check-code", func(w http.ResponseWriter, r *http.Request) {
+		enableCORS(w, r)
+		checkCode(w, r)
+	})
 
 	go CleanupRoutine()
 
 	port := ":9218"
 	fmt.Println("Server running on http://localhost" + port)
-
-	err := http.ListenAndServe(port, handler)
-	if err != nil {
+	if err := http.ListenAndServe(port, nil); err != nil {
 		fmt.Println("Server error:", err)
 	}
 }
