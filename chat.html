@@ -223,7 +223,7 @@
 
     <script>
         let token = localStorage.getItem("token");
-        let ws = new WebSocket("http://localhost:9218/ws/" + token);
+        let ws = new WebSocket("https://webchat-prototype.onrender.com/ws/" + token);
         let currentUser = localStorage.getItem("username");
 
         ws.onmessage = function(event) {

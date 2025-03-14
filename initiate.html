@@ -71,7 +71,7 @@
         };
 
         function fetchSession() {
-            fetch("http://localhost:9218/genSession")
+            fetch("https://webchat-prototype.onrender.com/genSession")
                 .then(response => response.json())
                 .then(data => {
                     if (data.session_id) {
