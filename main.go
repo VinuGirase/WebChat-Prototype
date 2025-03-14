@@ -193,6 +193,11 @@ func genLink() {
 }
 
 func main() {
+	fmt.Printf(" All Doc ")
+	fmt.Printf(" Map : %v", lastUsedMap)
+	fmt.Printf(" Occupied : %v", occupied)
+	fmt.Printf(" Unoccupied : %v", unoccupied)
+	fmt.Printf(" OccupiedApi : %v", occupiedApi)
 	genLink()
 
 	http.HandleFunc("/genSession", func(w http.ResponseWriter, r *http.Request) {
