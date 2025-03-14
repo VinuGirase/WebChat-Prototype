@@ -63,7 +63,7 @@ func ReleaseNumber(num int) {
 
 func CleanupRoutine() {
 	for {
-		time.Sleep(time.Hour)
+		time.Sleep(time.Minute * 5)
 		mu.Lock()
 		now := time.Now().Unix()
 		var toRelease []int
