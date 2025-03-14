@@ -68,7 +68,7 @@ func CleanupRoutine() {
 		now := time.Now().Unix()
 		var toRelease []int
 		for num, lastUsed := range lastUsedMap {
-			if now-lastUsed > 600 {
+			if now-lastUsed > 300 {
 				toRelease = append(toRelease, num)
 			}
 		}
@@ -182,7 +182,7 @@ func enableCORS(w http.ResponseWriter, r *http.Request) {
 }
 
 func genLink() {
-	for i := 1000; i <= 1005; i++ {
+	for i := 1000; i <= 1010; i++ {
 		api := fmt.Sprintf("/ws/%d", i)
 		unoccupied = append(unoccupied, i)
 		http.HandleFunc(api, func(w http.ResponseWriter, r *http.Request) {
