@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fetch Session ID</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 300px;
+        }
+        .btn {
+            padding: 12px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            transition: 0.3s;
+            margin: 10px 0;
+        }
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+        .btn-logout {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 10%;
+            background-color: #f44336;
+            color: white;
+        }
+        .btn-logout:hover {
+            background-color: #d32f2f;
+        }
+        #copyBtn {
+            display: none;
+        }
+        #joinBtn {
+            display: none;
+        }
+        #message {
+            color: green;
+        }
+    </style>
+    <script>
+        window.onload = function() {
+            const username = localStorage.getItem("username");
+            const isLogin = localStorage.getItem("isLogin");
+
+            if (!username || isLogin !== "true") {
+                window.location.href = "index.html";
+            }
+        };
+
+        function fetchSession() {
+            fetch("http://localhost:9218/genSession")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.session_id) {
+                        localStorage.setItem("token", data.session_id);
+                        document.getElementById("session").innerText = data.session_id;
+
+                        document.getElementById("copyBtn").style.display = "inline-block";
+                        document.getElementById("joinBtn").style.display = "inline-block";
+                    }else {
+                        console.error("Invalid response format");
+                    }
+                })
+                .catch(error =>{
+                    document.getElementById("session").innerText = "Error Fetching Session";
+                     console.error("Error fetching session:", error)});
+        }
+
+        function copyToClipboard() {
+            const sessionId = document.getElementById("session").innerText;
+            if (!sessionId) return;
+
+            navigator.clipboard.writeText(sessionId)
+                .then(() => {
+                    document.getElementById("message").innerText = "Copied to clipboard!";
+                })
+                .catch(err => console.error("Error copying text:", err));
+        }
+
+        function logout() {
+            localStorage.removeItem("username");
+            localStorage.removeItem("isLogin");
+            window.location.href = "index.html";
+        }
+    </script>
+</head>
+<body>
+
+    <button class="btn btn-logout" onclick="logout()">Logout</button>
+
+    <div class="container">
+        <h2>Session ID Fetcher</h2>
+        <button class="btn btn-primary" onclick="fetchSession()">Get Session ID</button>
+        <button class="btn btn-primary" id="copyBtn" onclick="copyToClipboard()">Copy to Clipboard</button>
+
+        <p><strong>Session ID:</strong> <span id="session"></span></p>
+        <p id="message"></p>
+
+        <a href="chat.html" id="joinBtn">
+            <button class="btn btn-primary">Join</button>
+        </a>
+    </div>
+
+</body>
+</html>

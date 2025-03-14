@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Chat</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            text-align: center;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #007bff, #00c6ff);
+            padding: 0.2rem;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+        
+        .logout-btn {
+            background: #ff4b5c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 20px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .logout-btn:hover {
+            background: #d32f2f;
+        }
+        #chat-container {
+            height: 85vh;
+            padding: 0.5rem 0;
+            border-radius: 10px;
+            border: 2px solid #007bff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background-color: white;
+            margin: 0.5rem auto;
+            width: 80%;
+        }
+
+        .msg-container{
+            display: flex;
+            flex-direction: column;
+            max-width: 70%;
+            margin: 0.5rem 0.1rem;
+            border-radius: 10px;
+        }
+
+        .input-container{
+            width: 80%;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+        }
+        .msg-input {
+            resize: none;
+            scrollbar-width: none;
+            width: 80%;
+            padding: 12px;
+            border: 2px solid #007bff;
+            border-radius: 20px;
+            outline: none;
+            font-size: 1rem;
+            transition: 0.3s;
+        }
+        .msg-input:focus {
+            border-color: #00c6ff;
+        }
+        .msg-btn {
+            padding: 12px 20px;
+            margin-left: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 20px;
+            font-size: 1rem;
+            transition: 0.3s;
+        }
+        .msg-btn:hover {
+            background: #0056b3;
+        }
+        h2 {
+            color: #007bff;
+            margin-top: 20px;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 100%;
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+        }
+
+        .msg-content {
+            display: flex;
+            flex-direction: column;
+            max-width: 70%;
+            min-width: 30%;
+            width: fit-content;
+            margin: 0 0.5rem;
+        }
+
+        .me {
+            align-self: flex-end;
+            border: 2px solid #128C7E;
+            border-radius: 6px;
+        }
+
+        .other-person {
+            align-self: flex-start;
+            border: 2px solid #075E54;
+            border-radius: 6px;
+
+        }
+
+        .username {
+            width: 100%;
+            font-weight: bold;
+            font-size: 1.2rem;
+            border-radius: 5px 5px 0 0;
+            
+        }
+
+        .me .username {
+            color: #006741;
+            align-self: flex-end;
+        }
+
+        .other-person .username {
+            color: #003169;
+            align-self: flex-start;
+        }
+
+        .text {
+            width: 90%;
+            font-size: 1rem;
+            color: #333;
+            border-radius: 0 0 5px 5px;
+            word-wrap: break-word;
+            line-height: 1.4;
+            padding: 0 5%;
+
+
+        }
+
+        .me .text {
+            align-self: flex-end;
+        }
+
+        .other-person .text {
+            align-self: flex-start;
+        }
+
+        /* Chat Scrollbar Improvements */
+        #chat-block {
+            overflow-y: auto;
+            height: 90%;
+            scrollbar-width: thin;
+            scrollbar-color: #64abfc #e3fffc;
+        }
+
+
+
+
+
+
+    </style>
+    <script>
+        window.onload = function() {
+            const username = localStorage.getItem("username");
+            const isLogin = localStorage.getItem("isLogin");
+
+            if (!username || isLogin !== "true") {
+                window.location.href = "index.html";
+            }
+        };
+
+        function logout() {
+            localStorage.removeItem("username");
+            localStorage.removeItem("isLogin");
+            window.location.href = "index.html";
+        }
+    </script>
+</head>
+<body>
+
+    <nav>
+        <div>
+            <a href="initiate.html">Initiate Session</a>
+            <a href="join.html">Join Session</a>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </nav>
+
+    <div id="chat-container">
+        <div id="chat-block"></div>
+        <div class="input-container">
+            <textarea class="msg-input" id="message" placeholder="Type a message..." rows="2"></textarea>
+            <button class="msg-btn" onclick="sendMessage()">Send</button>
+        </div>
+        
+    </div>
+    <br>
+    
+
+    <script>
+        let token = localStorage.getItem("token");
+        let ws = new WebSocket("http://localhost:9218/ws/" + token);
+        let currentUser = localStorage.getItem("username");
+
+        ws.onmessage = function(event) {
+            let chatBox = document.getElementById("chat-block");
+            let messageData = JSON.parse(event.data);
+            let isCurrentUser = messageData.username === currentUser;
+            if (messageData.code !== parseInt(token, 10)) {
+                return;
+            }
+            console.log(messageData);
+            let messageHTML = `
+                <div class="message ">
+                    <div class="msg-content ${isCurrentUser ? "me" : "other-person"}">
+                        <div class="username" style=" text-align:  ${isCurrentUser ? "right" : "left"}; background-color: ${isCurrentUser ? "#a8e6cf" : "#c7e1ff"};">
+                            <p style="margin: 0 0.5rem">${isCurrentUser ? 'You' : messageData.username}</p>
+                        </div>
+                        <div class="text" style=" text-align: left; background-color: ${isCurrentUser ? "#d4edda" : "#e1efff"};">
+                            ${messageData.message}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            chatBox.innerHTML += messageHTML;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        };
+
+
+        function sendMessage() {
+            let messageInput = document.getElementById("message");
+            let username = localStorage.getItem("username");
+            let token = localStorage.getItem("token");
+
+            if (messageInput.value.trim() !== "" && username) {
+                let messageData = {
+                    username: username,
+                    message: messageInput.value,
+                    code : parseInt(token, 10)
+                };
+
+                ws.send(JSON.stringify(messageData));
+                messageInput.value = "";
+            }
+            messageInput.focus();
+        }
+
+        document.getElementById("message").addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                if (event.shiftKey) {
+                    // Allow new line
+                    event.preventDefault();
+                    this.value += "\n";
+                } else {
+                    // Send message
+                    event.preventDefault();
+                    sendMessage();
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
