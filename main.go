@@ -193,6 +193,15 @@ func genLink() {
 }
 
 func main() {
+	occupied = occupied[:0]
+	unoccupied = unoccupied[:0]
+	occupiedApi = occupiedApi[:0]
+
+
+
+	for key := range lastUsedMap {
+		delete(lastUsedMap, key)
+	}
 	fmt.Printf(" All Doc ")
 	fmt.Printf(" Map : %v", lastUsedMap)
 	fmt.Printf(" Occupied : %v", occupied)
