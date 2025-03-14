@@ -75,7 +75,7 @@
             }
 
             try {
-                const response = await fetch(`http://localhost:9218/check-code?code=${sessionCode}`);
+                const response = await fetch(`https://webchat-prototype.onrender.com/check-code?code=${sessionCode}`);
                 const data = await response.json();
 
                 if (data.exists) {
